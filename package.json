@@ -1,7 +1,7 @@
 {
     "name": "comity",
-    "description": "A interactions over http framework for discord",
-    "version": "0.1.0",
+    "description": "A powerful framework for building bots on Discord's Interactions API",
+    "version": "0.1.1",
     "author": "teaishaelthy",
     "license": "ISC",
     "keywords": [
@@ -12,7 +12,7 @@
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/teaishaelthy/comity.git"
+        "url": "https://github.com/teaishealthy/comity.git"
     },
     "bugs": "https://github.com/teaishealthy/comity/issues",
     "main": "dist/index.js",
