@@ -1,0 +1,11 @@
+{
+    "entryPoints": ["./comity/index.ts"],
+    "exclude": ["**/node_modules/**", "**/dist/**"],
+    "excludeExternals": true,
+    "excludePrivate": true,
+    "name": "comity-docs",
+    "out": "./docs",
+    "theme": "default",
+    "includeVersion": true,
+    "readme": "./docs/README.md",
+}

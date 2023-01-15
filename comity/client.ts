@@ -11,6 +11,9 @@ import { SnowTransfer } from 'snowtransfer';
 
 export type InteractionCallback = (inter: Interaction) => any;
 
+/**
+ * A client for interacting with Discord's API and handling interactions
+ */
 export class Client extends SnowTransfer {
     publicKey: string;
     private commandRegistry: Map<
@@ -28,7 +31,13 @@ export class Client extends SnowTransfer {
         this.publicKey = publicKey;
     }
 
-    processInteraction(interaction: Interaction) {
+    /**
+     * Processes an interaction
+     * @param interaction The interaction to process
+     * @example
+     * client.processInteraction(interaction);
+     */
+    processInteraction(interaction: Interaction): void {
         logger.info(`Received interaction ${interaction.id}`);
 
         if (interaction.type === 2) {
@@ -45,7 +54,13 @@ export class Client extends SnowTransfer {
         }
     }
 
-    async deployCommands() {
+    /**
+     * Deploys all commands to Discord. Will delete any commands that are not registered
+     * @async
+     * @example
+     * await client.deployCommands();
+     */
+    async deployCommands(): Promise<void> {
         const me = await this.user.getSelf();
         const globalCommands = this.commandRegistry.get(undefined);
 
@@ -110,7 +125,7 @@ export class Client extends SnowTransfer {
         data: ApplicationCommandBase,
         callback: InteractionCallback,
         guild?: string | undefined,
-    ) {
+    ): void {
         let result = this.commandRegistry.get(guild);
         if (!result) {
             result = [];
@@ -119,21 +134,67 @@ export class Client extends SnowTransfer {
         result.push([data, callback]);
     }
 
+    /**
+     * Adds a global command
+     * @param data The data for the command
+     * @param callback The callback to run when the command is invoked
+     * @example
+     * client.addGlobalCommand(
+     *     {
+     *         name: 'ping',
+     *         description: 'Pong!',
+     *         default_member_permissions: '0',
+     *     },
+     *     (interaction) => {
+     *         client.respond(interaction, {
+     *             content: 'Pong!',
+     *         });
+     *     },
+     * );
+     */
     addGlobalCommand(
         data: ApplicationCommandBase,
         callback: InteractionCallback,
-    ) {
+    ): void {
         this._addCommand(data, callback);
     }
 
+    /**
+     * Adds a guild command
+     * @param data The data for the command
+     * @param callback The callback to run when the command is invoked
+     * @example
+     * client.addGuildCommand(
+     *    {
+     *       name: 'ping',
+     *       description: 'Pong!',
+     *       default_member_permissions: '0',
+     *       guild_id: '1234567890',
+     *   },
+     *   (interaction) => {
+     *       client.respond(interaction, {
+     *           content: 'Pong!',
+     *   });
+     * });
+     */
     addGuildCommand(
         data: ApplicationCommandBase & { guild_id: string },
         callback: InteractionCallback,
-    ) {
+    ): void {
         this._addCommand(data, callback, data.guild_id);
     }
 
-    async respond(interaction: Interaction, data: InteractionCallbackData) {
+    /**
+     * Responds to an interaction
+     * @async
+     * @param interaction The interaction to respond to
+     * @param data The data to respond with
+     * @example
+     * await client.respond(interaction, {
+     *    content: 'Pong!',
+     * });
+     */
+    async respond(interaction: Interaction, data: InteractionCallbackData): Promise<void> {
         await this.interaction.createInteractionResponse(
             interaction.id,
             interaction.token,
@@ -144,7 +205,7 @@ export class Client extends SnowTransfer {
         );
     }
 
-    private async deleteGuildCommands(guild: Guild, me: User) {
+    private async deleteGuildCommands(guild: Guild, me: User): Promise<void> {
         const guildCommands = this.commandRegistry.get(guild.id);
         const discordGuildCommands =
             await this.interaction.getGuildApplicationCommands(me.id, guild.id);
