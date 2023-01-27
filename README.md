@@ -19,39 +19,4 @@ yarn add comity
 
 ## Usage
 
-```ts
-import { Client } from 'comity';
-
-const client = new Client('token');
-
-client.addGlobalCommand(
-    {
-        name: 'ping',
-        description: 'Pong!',
-        default_member_permissions: '0',
-    },
-    (interaction) => {
-        // this can be async
-        client.respond(interaction, {
-            content: 'Pong!',
-        });
-    },
-);
-
-await client.deployCommands();
-```
-
-### Express
-
-```ts
-...
-import { verifyKeyMiddleware } from "discord-interactions"
-
-app.post('/interactions', verifyKeyMiddleware("publicKey"), async (req, res) => {
-    return await client.processInteraction(req.body);
-});
-
-app.listen(3000, () => {
-    console.log('Listening on port 3000');
-});
-```
+See the [examples](./examples) directory for examples of how to use Comity with different frameworks / platforms.
