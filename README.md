@@ -22,7 +22,7 @@ yarn add comity
 ```ts
 import { Client } from 'comity';
 
-const client = new Client('token', 'publicKey');
+const client = new Client('token');
 
 client.addGlobalCommand(
     {
@@ -30,8 +30,9 @@ client.addGlobalCommand(
         description: 'Pong!',
         default_member_permissions: '0',
     },
-    async (interaction) => {
-        await client.respond(interaction, {
+    (interaction) => {
+        // this can be async
+        client.respond(interaction, {
             content: 'Pong!',
         });
     },
@@ -46,9 +47,8 @@ await client.deployCommands();
 ...
 import { verifyKeyMiddleware } from "discord-interactions"
 
-app.post('/interactions', verifyKeyMiddleware(client.publicKey), (req, res) => {
-    client.processInteraction(req.body);
-    res.sendStatus(200);
+app.post('/interactions', verifyKeyMiddleware("publicKey"), async (req, res) => {
+    return await client.processInteraction(req.body);
 });
 
 app.listen(3000, () => {

@@ -1,4 +1,11 @@
-import { logger } from './logging';
+// Only used for routes
+import {
+    APPLICATION_COMMANDS,
+    GUILD_APPLICATION_COMMANDS,
+    USER,
+} from '@biscuitland/api-types';
+import { DefaultRestAdapter } from '@biscuitland/rest';
+// Provides more complete types than @biscuitland/api-types
 import {
     ApplicationCommandBase,
     FetchedApplicationCommand,
@@ -7,28 +14,25 @@ import {
     InteractionCallbackData,
     User,
 } from 'discord-typings';
-import { SnowTransfer } from 'snowtransfer';
 
-export type InteractionCallback = (inter: Interaction) => any;
+export type InteractionCallback = (
+    inter: Interaction,
+) => Promise<InteractionCallbackData> | InteractionCallbackData;
 
 /**
  * A client for interacting with Discord's API and handling interactions
  */
-export class Client extends SnowTransfer {
-    publicKey: string;
+export class Client extends DefaultRestAdapter {
     private commandRegistry: Map<
         string | undefined,
         [ApplicationCommandBase, InteractionCallback][]
     > = new Map();
 
-    constructor(
-        token: string,
-        publicKey: string,
-        guildIds?: string[] | undefined,
-    ) {
-        super(token);
-
-        this.publicKey = publicKey;
+    constructor(token: string) {
+        super({
+            token,
+            version: 10,
+        });
     }
 
     /**
@@ -37,9 +41,12 @@ export class Client extends SnowTransfer {
      * @example
      * client.processInteraction(interaction);
      */
-    processInteraction(interaction: Interaction): void {
-        logger.info(`Received interaction ${interaction.id}`);
+    async processInteraction(
+        interaction: Interaction,
+    ): Promise<InteractionCallbackData> {
+        console.log(`Received interaction ${interaction.id}`);
 
+        let response: InteractionCallbackData | undefined;
         if (interaction.type === 2) {
             const data = interaction.data!;
             const { name, guild_id } = data;
@@ -49,9 +56,13 @@ export class Client extends SnowTransfer {
                 ?.find(([command]) => command.name === name)?.[1];
 
             if (callback) {
-                callback(interaction);
+                response = await callback(interaction as Interaction);
             }
         }
+        if (response === undefined) {
+            throw new Error('No response found');
+        }
+        return response;
     }
 
     /**
@@ -61,42 +72,34 @@ export class Client extends SnowTransfer {
      * await client.deployCommands();
      */
     async deployCommands(): Promise<void> {
-        const me = await this.user.getSelf();
+        const me = await this.get<User>(USER('@me'));
         const globalCommands = this.commandRegistry.get(undefined);
 
         if (globalCommands) {
-            const commands = await this.interaction.getApplicationCommands(
-                me.id,
+            const commands = await this.get<FetchedApplicationCommand[]>(
+                APPLICATION_COMMANDS(me.id),
             );
             const toDelete = commands.filter(
                 (command) =>
                     !globalCommands.find((c) => c[0].name === command.name),
             );
-            logger.info(`Deleting ${toDelete.length} global commands`);
+            console.log(`Deleting ${toDelete.length} global commands`);
 
             await Promise.all(
                 toDelete.map(async (command) => {
-                    await this.interaction.deleteApplicationCommand(
-                        me.id,
-                        command.id,
-                    );
-                    logger.info(`Deleted global command ${command.name}`);
+                    await this.delete(APPLICATION_COMMANDS(me.id, command.id));
+                    console.log(`Deleted global command ${command.name}`);
                 }),
             );
 
-            await this.interaction
-                .bulkOverwriteApplicationCommands(
-                    me.id,
-                    globalCommands.map((c) => c[0]),
-                )
-                .then(() =>
-                    logger.info(
-                        `Created ${globalCommands.length} global commands`,
-                    ),
-                );
+            await this.put(
+                APPLICATION_COMMANDS(me.id),
+                globalCommands.map((c) => c[0]),
+            );
+            console.log('All global commands created!');
         }
 
-        const guilds = await this.user.getGuilds();
+        const guilds = await this.get<Guild[]>('/users/@me/guilds');
 
         for (const guild of guilds) {
             await this.deleteGuildCommands(guild, me);
@@ -108,9 +111,8 @@ export class Client extends SnowTransfer {
                         ApplicationCommandBase[],
                     ]) => {
                         if (guildId) {
-                            await this.interaction.bulkOverwriteGuildApplicationCommands(
-                                me.id,
-                                guildId,
+                            await this.put(
+                                APPLICATION_COMMANDS(me.id, guildId),
                                 commands,
                             );
                         }
@@ -118,7 +120,7 @@ export class Client extends SnowTransfer {
                 ),
             );
         }
-        logger.info('All commands created!');
+        console.log('All commands created!');
     }
 
     private _addCommand(
@@ -146,9 +148,12 @@ export class Client extends SnowTransfer {
      *         default_member_permissions: '0',
      *     },
      *     (interaction) => {
-     *         client.respond(interaction, {
-     *             content: 'Pong!',
-     *         });
+     *         return {
+     *             type: 4,
+     *             data: {
+     *                 content: 'Pong!',
+     *             },
+     *         };
      *     },
      * );
      */
@@ -172,9 +177,13 @@ export class Client extends SnowTransfer {
      *       guild_id: '1234567890',
      *   },
      *   (interaction) => {
-     *       client.respond(interaction, {
-     *           content: 'Pong!',
-     *   });
+     *      return {
+     *             type: 4,
+     *             data: {
+     *                 content: 'Pong!',
+     *             },
+     *         };
+     *     },
      * });
      */
     addGuildCommand(
@@ -184,31 +193,11 @@ export class Client extends SnowTransfer {
         this._addCommand(data, callback, data.guild_id);
     }
 
-    /**
-     * Responds to an interaction
-     * @async
-     * @param interaction The interaction to respond to
-     * @param data The data to respond with
-     * @example
-     * await client.respond(interaction, {
-     *    content: 'Pong!',
-     * });
-     */
-    async respond(interaction: Interaction, data: InteractionCallbackData): Promise<void> {
-        await this.interaction.createInteractionResponse(
-            interaction.id,
-            interaction.token,
-            {
-                type: 4,
-                data,
-            },
-        );
-    }
-
     private async deleteGuildCommands(guild: Guild, me: User): Promise<void> {
         const guildCommands = this.commandRegistry.get(guild.id);
-        const discordGuildCommands =
-            await this.interaction.getGuildApplicationCommands(me.id, guild.id);
+        const discordGuildCommands = await this.get<
+            FetchedApplicationCommand[]
+        >(GUILD_APPLICATION_COMMANDS(me.id, guild.id));
         let toDelete: FetchedApplicationCommand[] = discordGuildCommands;
 
         if (guildCommands) {
@@ -216,26 +205,22 @@ export class Client extends SnowTransfer {
                 (command) =>
                     !guildCommands.find((c) => c[0].name === command.name),
             );
-            logger.info(
+            console.log(
                 `Deleting ${toDelete.length} guild commands from ${guild.id}`,
             );
             for (const command of toDelete) {
-                await this.interaction.deleteGuildApplicationCommand(
-                    me.id,
-                    guild.id,
-                    command.id,
+                await this.delete(
+                    GUILD_APPLICATION_COMMANDS(me.id, guild.id, command.id),
                 );
-                logger.info(`Deleted command ${command.name} from ${guild.id}`);
+                console.log(`Deleted command ${command.name} from ${guild.id}`);
             }
         }
 
         for (const deleteCommand of toDelete) {
-            await this.interaction.deleteGuildApplicationCommand(
-                me.id,
-                guild.id,
-                deleteCommand.id,
+            await this.delete(
+                GUILD_APPLICATION_COMMANDS(me.id, guild.id, deleteCommand.id),
             );
-            logger.info(
+            console.log(
                 `Deleted command ${deleteCommand.name} from ${guild.id}`,
             );
         }
