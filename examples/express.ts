@@ -6,7 +6,7 @@ import { client } from "./base";
 const app = express();
 
 app.post('/interactions', verifyKeyMiddleware("publicKey"), async (req, res) => {
-    return await client.processInteraction(req.body);
+    res.json(await client.processInteraction(req.body));
 });
 
 app.listen(3000, () => {
