@@ -1,4 +1,5 @@
 // Only used for routes
+import { OptionWithValue, commandOptionHasValue } from './options';
 import {
     APPLICATION_COMMANDS,
     GUILD_APPLICATION_COMMANDS,
@@ -8,6 +9,7 @@ import { DefaultRestAdapter } from '@biscuitland/rest';
 // Provides more complete types than @biscuitland/api-types
 import {
     ApplicationCommandBase,
+    ApplicationCommandOption,
     FetchedApplicationCommand,
     Guild,
     Interaction,
@@ -17,7 +19,22 @@ import {
 
 export type InteractionCallback = (
     inter: Interaction,
+    ...options: any[]
 ) => Promise<InteractionCallbackData> | InteractionCallbackData;
+
+export class CommandController {
+    private command: ApplicationCommandBase;
+
+    constructor(command: ApplicationCommandBase) {
+        this.command = command;
+    }
+
+    option(option: ApplicationCommandOption) {
+        if (!this.command.options) this.command.options = [];
+        this.command.options.push(option);
+        return this;
+    }
+}
 
 /**
  * A client for interacting with Discord's API and handling interactions
@@ -56,7 +73,15 @@ export class Client extends DefaultRestAdapter {
                 ?.find(([command]) => command.name === name)?.[1];
 
             if (callback) {
-                response = await callback(interaction as Interaction);
+                const options =
+                    data.options
+                        ?.filter<OptionWithValue>(commandOptionHasValue)
+                        .map((option) => option.value) || [];
+
+                response = await callback(
+                    interaction as Interaction,
+                    ...options,
+                );
             }
         }
         if (response === undefined) {
@@ -127,13 +152,15 @@ export class Client extends DefaultRestAdapter {
         data: ApplicationCommandBase,
         callback: InteractionCallback,
         guild?: string | undefined,
-    ): void {
+    ): CommandController {
         let result = this.commandRegistry.get(guild);
         if (!result) {
             result = [];
             this.commandRegistry.set(guild, result);
         }
         result.push([data, callback]);
+
+        return new CommandController(data);
     }
 
     /**
@@ -160,8 +187,8 @@ export class Client extends DefaultRestAdapter {
     addGlobalCommand(
         data: ApplicationCommandBase,
         callback: InteractionCallback,
-    ): void {
-        this._addCommand(data, callback);
+    ): CommandController {
+        return this._addCommand(data, callback);
     }
 
     /**
@@ -189,8 +216,8 @@ export class Client extends DefaultRestAdapter {
     addGuildCommand(
         data: ApplicationCommandBase & { guild_id: string },
         callback: InteractionCallback,
-    ): void {
-        this._addCommand(data, callback, data.guild_id);
+    ): CommandController {
+        return this._addCommand(data, callback, data.guild_id);
     }
 
     private async deleteGuildCommands(guild: Guild, me: User): Promise<void> {
