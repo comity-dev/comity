@@ -1,5 +1,11 @@
 // Only used for routes
-import { OptionWithValue, commandOptionHasValue } from './options';
+import {
+    ObjectOption,
+    OptionTypes,
+    OptionWithValue,
+    commandOptionHasValue,
+    commandOptionIsObject,
+} from './options';
 import {
     APPLICATION_COMMANDS,
     GUILD_APPLICATION_COMMANDS,
@@ -14,6 +20,8 @@ import {
     Guild,
     Interaction,
     InteractionCallbackData,
+    InteractionData,
+    Member,
     User,
 } from 'discord-typings';
 
@@ -34,6 +42,19 @@ export class CommandController {
         this.command.options.push(option);
         return this;
     }
+}
+
+function getMemberOrUserFromInteraction(
+    data: InteractionData,
+    option: ObjectOption<6 | 7 | 8 | 9>,
+): User | Member {
+    const user = data.resolved?.users?.[option.value]!;
+    const maybeMember = data.resolved?.members?.[option.value];
+
+    if (maybeMember) {
+        return Object.assign(user, maybeMember);
+    }
+    return user;
 }
 
 /**
@@ -74,10 +95,35 @@ export class Client extends DefaultRestAdapter {
 
             if (callback) {
                 const options =
-                    data.options
-                        ?.filter<OptionWithValue>(commandOptionHasValue)
-                        .map((option) => option.value) || [];
-
+                    data.options?.map((option) => {
+                        console.log(option.type);
+                        if (commandOptionHasValue(option)) {
+                            return (option as OptionWithValue).value;
+                        } else if (
+                            commandOptionIsObject(OptionTypes.USER, option)
+                        ) {
+                            getMemberOrUserFromInteraction(data, option);
+                        } else if (
+                            commandOptionIsObject(OptionTypes.CHANNEL, option)
+                        ) {
+                            return data.resolved?.channels?.[option.value]!;
+                        } else if (
+                            commandOptionIsObject(OptionTypes.ROLE, option)
+                        ) {
+                            return data.resolved?.roles?.[option.value]!;
+                        } else if (
+                            commandOptionIsObject(
+                                OptionTypes.MENTIONABLE,
+                                option,
+                            )
+                        ) {
+                            return (
+                                getMemberOrUserFromInteraction(data, option) ||
+                                data.resolved?.roles?.[option.value]
+                            );
+                        }
+                    }) || [];
+                console.log(options);
                 response = await callback(
                     interaction as Interaction,
                     ...options,

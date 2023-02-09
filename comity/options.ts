@@ -14,8 +14,8 @@ export const OptionTypes = {
     CHANNEL: 7,
     ROLE: 8,
     MENTIONABLE: 9,
-    NUMBER : 10,
-    ATTACHMENT : 11,
+    NUMBER: 10,
+    ATTACHMENT: 11,
 } as const;
 
 export type OptionWithValue = Exclude<
@@ -23,8 +23,23 @@ export type OptionWithValue = Exclude<
     | ApplicationCommandInteractionDataOptionAsTypeSub
     | ApplicationCommandInteractionDataOptionNotTypeNarrowed
 >;
+
+export type ObjectOption<T extends 6 | 7 | 8 | 9> = {
+    type: T;
+    name: string;
+    focused?: boolean;
+    value: string;
+}
+
 export function commandOptionHasValue(
     option: ApplicationCommandInteractionDataOption,
 ): option is OptionWithValue {
     return ![1, 2, 6, 7, 8, 9, 11].includes(option.type);
+}
+
+export function commandOptionIsObject<T extends 6 | 7 | 8 | 9>(
+    type: T,
+    option: ApplicationCommandInteractionDataOption,
+): option is ObjectOption<T> {
+    return option.type === type;
 }
