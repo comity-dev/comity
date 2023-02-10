@@ -1,12 +1,12 @@
 // Only used for routes
-import { SlashCommandBuilder } from './builders';
+import { SlashCommandBuilder } from './builders.js';
 import {
     ObjectOption,
     OptionTypes,
     OptionWithValue,
     commandOptionHasValue,
     commandOptionIsObject,
-} from './options';
+} from './options.js';
 import {
     APPLICATION_COMMANDS,
     GUILD_APPLICATION_COMMANDS,
