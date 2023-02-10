@@ -96,7 +96,6 @@ export class Client extends DefaultRestAdapter {
             if (callback) {
                 const options =
                     data.options?.map((option) => {
-                        console.log(option.type);
                         if (commandOptionHasValue(option)) {
                             return (option as OptionWithValue).value;
                         } else if (
@@ -121,6 +120,8 @@ export class Client extends DefaultRestAdapter {
                                 getMemberOrUserFromInteraction(data, option) ||
                                 data.resolved?.roles?.[option.value]
                             );
+                        } else if (commandOptionIsObject(OptionTypes.ATTACHMENT, option)) {
+                            return data.resolved?.attachments?.[option.value]!;
                         }
                     }) || [];
                 console.log(options);

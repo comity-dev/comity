@@ -24,7 +24,7 @@ export type OptionWithValue = Exclude<
     | ApplicationCommandInteractionDataOptionNotTypeNarrowed
 >;
 
-export type ObjectOption<T extends 6 | 7 | 8 | 9> = {
+export type ObjectOption<T extends 6 | 7 | 8 | 9 | 11> = {
     type: T;
     name: string;
     focused?: boolean;
@@ -37,7 +37,7 @@ export function commandOptionHasValue(
     return ![1, 2, 6, 7, 8, 9, 11].includes(option.type);
 }
 
-export function commandOptionIsObject<T extends 6 | 7 | 8 | 9>(
+export function commandOptionIsObject<T extends 6 | 7 | 8 | 9 | 11>(
     type: T,
     option: ApplicationCommandInteractionDataOption,
 ): option is ObjectOption<T> {
