@@ -1,5 +1,12 @@
 // Only used for routes
 import {
+    ObjectOption,
+    OptionTypes,
+    OptionWithValue,
+    commandOptionHasValue,
+    commandOptionIsObject,
+} from './options';
+import {
     APPLICATION_COMMANDS,
     GUILD_APPLICATION_COMMANDS,
     USER,
@@ -8,16 +15,54 @@ import { DefaultRestAdapter } from '@biscuitland/rest';
 // Provides more complete types than @biscuitland/api-types
 import {
     ApplicationCommandBase,
+    ApplicationCommandOption,
     FetchedApplicationCommand,
     Guild,
     Interaction,
     InteractionCallbackData,
+    InteractionData,
+    Member,
     User,
 } from 'discord-typings';
 
 export type InteractionCallback = (
     inter: Interaction,
+    ...options: any[]
 ) => Promise<InteractionCallbackData> | InteractionCallbackData;
+
+/**
+ * A builder for slash commands
+ */
+export class SlashCommandBuilder {
+    private command: ApplicationCommandBase;
+
+    constructor(command: ApplicationCommandBase) {
+        this.command = command;
+    }
+
+    /**
+     * Adds an option to the command
+     * @param option The option to add
+     */
+    option(option: ApplicationCommandOption) {
+        if (!this.command.options) this.command.options = [];
+        this.command.options.push(option);
+        return this;
+    }
+}
+
+function getMemberOrUserFromInteraction(
+    data: InteractionData,
+    option: ObjectOption<6 | 7 | 8 | 9>,
+): User | Member {
+    const user = data.resolved?.users?.[option.value]!;
+    const maybeMember = data.resolved?.members?.[option.value];
+
+    if (maybeMember) {
+        return Object.assign(user, maybeMember);
+    }
+    return user;
+}
 
 /**
  * A client for interacting with Discord's API and handling interactions
@@ -56,7 +101,41 @@ export class Client extends DefaultRestAdapter {
                 ?.find(([command]) => command.name === name)?.[1];
 
             if (callback) {
-                response = await callback(interaction as Interaction);
+                const options =
+                    data.options?.map((option) => {
+                        if (commandOptionHasValue(option)) {
+                            return (option as OptionWithValue).value;
+                        } else if (
+                            commandOptionIsObject(OptionTypes.USER, option)
+                        ) {
+                            getMemberOrUserFromInteraction(data, option);
+                        } else if (
+                            commandOptionIsObject(OptionTypes.CHANNEL, option)
+                        ) {
+                            return data.resolved?.channels?.[option.value]!;
+                        } else if (
+                            commandOptionIsObject(OptionTypes.ROLE, option)
+                        ) {
+                            return data.resolved?.roles?.[option.value]!;
+                        } else if (
+                            commandOptionIsObject(
+                                OptionTypes.MENTIONABLE,
+                                option,
+                            )
+                        ) {
+                            return (
+                                getMemberOrUserFromInteraction(data, option) ||
+                                data.resolved?.roles?.[option.value]
+                            );
+                        } else if (commandOptionIsObject(OptionTypes.ATTACHMENT, option)) {
+                            return data.resolved?.attachments?.[option.value]!;
+                        }
+                    }) || [];
+                console.log(options);
+                response = await callback(
+                    interaction as Interaction,
+                    ...options,
+                );
             }
         }
         if (response === undefined) {
@@ -127,13 +206,15 @@ export class Client extends DefaultRestAdapter {
         data: ApplicationCommandBase,
         callback: InteractionCallback,
         guild?: string | undefined,
-    ): void {
+    ): SlashCommandBuilder {
         let result = this.commandRegistry.get(guild);
         if (!result) {
             result = [];
             this.commandRegistry.set(guild, result);
         }
         result.push([data, callback]);
+
+        return new SlashCommandBuilder(data);
     }
 
     /**
@@ -160,8 +241,8 @@ export class Client extends DefaultRestAdapter {
     addGlobalCommand(
         data: ApplicationCommandBase,
         callback: InteractionCallback,
-    ): void {
-        this._addCommand(data, callback);
+    ): SlashCommandBuilder {
+        return this._addCommand(data, callback);
     }
 
     /**
@@ -189,8 +270,8 @@ export class Client extends DefaultRestAdapter {
     addGuildCommand(
         data: ApplicationCommandBase & { guild_id: string },
         callback: InteractionCallback,
-    ): void {
-        this._addCommand(data, callback, data.guild_id);
+    ): SlashCommandBuilder {
+        return this._addCommand(data, callback, data.guild_id);
     }
 
     private async deleteGuildCommands(guild: Guild, me: User): Promise<void> {
