@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/teaishealthy/comity/compare/v0.1.3...v0.2.0) (2023-02-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* builders ([#6](https://github.com/teaishealthy/comity/issues/6))
+
+### Features
+
+* autocomplete ([#7](https://github.com/teaishealthy/comity/issues/7)) ([ea2404d](https://github.com/teaishealthy/comity/commit/ea2404d25755d63c9075c12329d5aa3be06cc018))
+* builders ([#6](https://github.com/teaishealthy/comity/issues/6)) ([8d2e01a](https://github.com/teaishealthy/comity/commit/8d2e01a2f5e084886d02c90e87b978d93ce59200))
+* **options:** implement options ([#3](https://github.com/teaishealthy/comity/issues/3)) ([d3ea7f0](https://github.com/teaishealthy/comity/commit/d3ea7f0ed795c46c5a2bea1a9ffc0ef0087f49fa))
+
 ## 0.1.3 (2023-02-08)
 
 
