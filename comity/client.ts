@@ -19,8 +19,8 @@ import {
     FetchedApplicationCommand,
     Guild,
     Interaction,
-    InteractionCallbackData,
     InteractionData,
+    InteractionResponse,
     Member,
     User,
 } from 'discord-typings';
@@ -28,11 +28,7 @@ import {
 export type InteractionCallback = (
     inter: Interaction,
     ...options: any[]
-) => Promise<InteractionCallbackData> | InteractionCallbackData;
-
-/**
- * A builder for slash commands
- */
+) => Promise<InteractionResponse> | InteractionResponse;
 
 function getMemberOrUserFromInteraction(
     data: InteractionData,
@@ -53,7 +49,7 @@ function getMemberOrUserFromInteraction(
 export class Client extends DefaultRestAdapter {
     private commandRegistry: Map<
         string | undefined,
-        [ApplicationCommandBase, InteractionCallback][]
+        [SlashCommandBuilder, InteractionCallback][]
     > = new Map();
 
     constructor(token: string) {
@@ -71,17 +67,19 @@ export class Client extends DefaultRestAdapter {
      */
     async processInteraction(
         interaction: Interaction,
-    ): Promise<InteractionCallbackData> {
-        console.log(`Received interaction ${interaction.id}`);
+    ): Promise<InteractionResponse> {
+        console.log(
+            `Received interaction ${interaction.id} of type ${interaction.type}`,
+        );
 
-        let response: InteractionCallbackData | undefined;
+        let response: InteractionResponse | undefined;
         if (interaction.type === 2) {
             const data = interaction.data!;
             const { name, guild_id } = data;
 
             const callback = this.commandRegistry
                 .get(guild_id)
-                ?.find(([command]) => command.name === name)?.[1];
+                ?.find(([command]) => command._command.name === name)?.[1];
 
             if (callback) {
                 const options =
@@ -124,6 +122,38 @@ export class Client extends DefaultRestAdapter {
                     ...options,
                 );
             }
+        } else if (interaction.type === 4) {
+            const focusedOption = interaction.data?.options?.find(
+                (option) => option.focused,
+            );
+
+            if (!focusedOption) {
+                throw new Error('No focused option found');
+            }
+
+            const builder = this.commandRegistry
+                .get(interaction.data?.guild_id)
+                ?.find(
+                    ([command]) =>
+                        command._command.name === interaction.data?.name,
+                )?.[0];
+
+            const choices = await builder?._autocompletes.get(
+                focusedOption.name,
+            )?.(interaction, (focusedOption as OptionWithValue).value);
+
+            if (!choices) {
+                throw new Error('No choices found');
+            }
+            return {
+                type: 8,
+                data: {
+                    choices: choices.map((choice) => ({
+                        name: choice,
+                        value: choice,
+                    })),
+                },
+            };
         }
         if (response === undefined) {
             throw new Error('No response found');
@@ -147,7 +177,9 @@ export class Client extends DefaultRestAdapter {
             );
             const toDelete = commands.filter(
                 (command) =>
-                    !globalCommands.find((c) => c[0].name === command.name),
+                    !globalCommands.find(
+                        (c) => c[0]._command.name === command.name,
+                    ),
             );
             console.log(`Deleting ${toDelete.length} global commands`);
 
@@ -160,7 +192,7 @@ export class Client extends DefaultRestAdapter {
 
             await this.put(
                 APPLICATION_COMMANDS(me.id),
-                globalCommands.map((c) => c[0]),
+                globalCommands.map((c) => c[0]._command),
             );
             console.log('All global commands created!');
         }
@@ -174,12 +206,12 @@ export class Client extends DefaultRestAdapter {
                 Object.entries(this.commandRegistry).map(
                     async ([guildId, commands]: [
                         string | undefined,
-                        ApplicationCommandBase[],
+                        SlashCommandBuilder[],
                     ]) => {
                         if (guildId) {
                             await this.put(
                                 APPLICATION_COMMANDS(me.id, guildId),
-                                commands,
+                                commands.map((c) => c._command),
                             );
                         }
                     },
@@ -207,15 +239,12 @@ export class Client extends DefaultRestAdapter {
      * );
      */
     addCommand(builder: SlashCommandBuilder): void {
-        let result = this.commandRegistry.get(builder.guildId);
+        let result = this.commandRegistry.get(builder._guildId);
         if (!result) {
             result = [];
-            this.commandRegistry.set(builder.guildId, result);
+            this.commandRegistry.set(builder._guildId, result);
         }
-        result.push([
-            builder.command as ApplicationCommandBase,
-            builder.callback!,
-        ]);
+        result.push([builder, builder._callback!]);
     }
 
     private async deleteGuildCommands(guild: Guild, me: User): Promise<void> {
@@ -228,7 +257,9 @@ export class Client extends DefaultRestAdapter {
         if (guildCommands) {
             const toDelete = discordGuildCommands.filter(
                 (command) =>
-                    !guildCommands.find((c) => c[0].name === command.name),
+                    !guildCommands.find(
+                        (c) => c[0]._command.name === command.name,
+                    ),
             );
             console.log(
                 `Deleting ${toDelete.length} guild commands from ${guild.id}`,

@@ -1,5 +1,5 @@
 import { Client, SlashCommandBuilder } from 'comity';
-import { InteractionCallbackData } from 'discord-typings';
+import { InteractionResponse } from 'discord-typings';
 
 export const client = new Client('token');
 
@@ -13,6 +13,6 @@ client.addCommand(
                 data: {
                     content: 'Pong!',
                 },
-            } as InteractionCallbackData;
+            } as InteractionResponse;
         }),
 );
