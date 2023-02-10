@@ -119,7 +119,6 @@ export class Client extends DefaultRestAdapter {
                             return data.resolved?.attachments?.[option.value]!;
                         }
                     }) || [];
-                console.log(options);
                 response = await callback(
                     interaction as Interaction,
                     ...options,
