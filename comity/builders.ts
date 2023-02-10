@@ -1,8 +1,9 @@
 import { InteractionCallback } from './client.js';
-import { OptionTypes } from './options.js';
+import { ObjectOption, OptionTypes, OptionWithValue } from './options.js';
 import {
     ApplicationCommandBase,
     ApplicationCommandOption,
+    Interaction,
 } from 'discord-typings';
 
 export type ValueOf<T> = T[keyof T];
@@ -14,7 +15,8 @@ export type ValueOf<T> = T[keyof T];
  * @internal
  */
 export class OptionBuilder {
-    option: Partial<ApplicationCommandOption> = {};
+    _autocompleteHandler?: (inter: Interaction) => Promise<string[]>;
+    _option: Partial<ApplicationCommandOption> = {};
 
     /**
      * Set the name of the option
@@ -24,7 +26,7 @@ export class OptionBuilder {
      * Must be unique within the command
      */
     name(name: string) {
-        this.option.name = name;
+        this._option.name = name;
         return this;
     }
 
@@ -35,7 +37,7 @@ export class OptionBuilder {
      * Must be between 1 and 100 characters long
      */
     description(description: string) {
-        this.option.description = description;
+        this._option.description = description;
         return this;
     }
 
@@ -44,7 +46,7 @@ export class OptionBuilder {
      * @param required Whether the option is required
      */
     required(required: boolean) {
-        this.option.required = required;
+        this._option.required = required;
         return this;
     }
 
@@ -57,7 +59,21 @@ export class OptionBuilder {
      * @see {@link https://discord.dev/interactions/application-commands#application-command-object-application-command-option-type}
      */
     type(type: ValueOf<typeof OptionTypes>) {
-        this.option.type = type;
+        this._option.type = type;
+        return this;
+    }
+
+    /**
+     * Set the autocomplete handler for the option
+     * @param handler The autocomplete handler
+     * @remarks
+     * This is only for options of type {@link OptionTypes.STRING}, {@link OptionTypes.INTEGER}, or {@link OptionTypes.NUMBER}
+     * @see {@link OptionTypes}
+     * @see {@link https://discord.dev/interactions/application-commands#autocomplete}
+     */
+    autocomplete(handler: (inter: Interaction) => Promise<string[]>) {
+        this._autocompleteHandler = handler;
+        (this._option as any).autocomplete = true; // FIXME
         return this;
     }
 }
@@ -66,11 +82,15 @@ export class OptionBuilder {
  * A builder for slash commands
  */
 export class SlashCommandBuilder {
-    command: Partial<ApplicationCommandBase> = {
+    _command: Partial<ApplicationCommandBase> = {
         type: 1,
     };
-    guildId?: string;
-    callback?: InteractionCallback;
+    _guildId?: string;
+    _callback?: InteractionCallback;
+    _autocompletes = new Map<
+        string,
+        (inter: Interaction, value: any) => Promise<any[]> | any[]
+    >();
 
     /**
      * Set the name of the command
@@ -79,7 +99,7 @@ export class SlashCommandBuilder {
      * Must be between 1 and 32 characters long
      */
     name(name: string) {
-        this.command.name = name;
+        this._command.name = name;
         return this;
     }
 
@@ -90,7 +110,7 @@ export class SlashCommandBuilder {
      * Must be between 1 and 100 characters long
      */
     description(description: string) {
-        this.command.description = description;
+        this._command.description = description;
         return this;
     }
 
@@ -99,7 +119,7 @@ export class SlashCommandBuilder {
      * @param permissions The permissions to set
      */
     defaultMemberPermissions(permissions: string) {
-        this.command.default_member_permissions = permissions;
+        this._command.default_member_permissions = permissions;
         return this;
     }
 
@@ -110,7 +130,7 @@ export class SlashCommandBuilder {
      * This is only for globally-scoped commands
      */
     dmPermission(allowed: boolean) {
-        this.command.dm_permission = allowed;
+        this._command.dm_permission = allowed;
         return this;
     }
 
@@ -120,9 +140,12 @@ export class SlashCommandBuilder {
      */
     option(callback: (builder: OptionBuilder) => OptionBuilder) {
         const builder = new OptionBuilder();
-        const option = callback(builder).option;
-        if (!this.command.options) this.command.options = [];
-        this.command.options.push(option as ApplicationCommandOption);
+        const option = callback(builder)._option;
+        if (!this._command.options) this._command.options = [];
+        this._command.options.push(option as ApplicationCommandOption);
+        if (builder._autocompleteHandler) {
+            this._autocompletes.set(option.name!, builder._autocompleteHandler);
+        }
         return this;
     }
 
@@ -131,7 +154,7 @@ export class SlashCommandBuilder {
      * @param guildId The ID of the guild
      */
     guild(guildId: string) {
-        this.guildId = guildId;
+        this._guildId = guildId;
         return this;
     }
 
@@ -141,7 +164,7 @@ export class SlashCommandBuilder {
      * This is the default (overrides {@link SlashCommandBuilder#guild})
      */
     global() {
-        this.guildId = undefined;
+        this._guildId = undefined;
         return this;
     }
 
@@ -150,7 +173,7 @@ export class SlashCommandBuilder {
      * @param callback The callback to run when the command is invoked
      */
     handler(callback: InteractionCallback) {
-        this.callback = callback;
+        this._callback = callback;
         return this;
     }
 }
