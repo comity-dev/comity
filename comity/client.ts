@@ -30,13 +30,20 @@ export type InteractionCallback = (
     ...options: any[]
 ) => Promise<InteractionCallbackData> | InteractionCallbackData;
 
-export class CommandController {
+/**
+ * A builder for slash commands
+ */
+export class SlashCommandBuilder {
     private command: ApplicationCommandBase;
 
     constructor(command: ApplicationCommandBase) {
         this.command = command;
     }
 
+    /**
+     * Adds an option to the command
+     * @param option The option to add
+     */
     option(option: ApplicationCommandOption) {
         if (!this.command.options) this.command.options = [];
         this.command.options.push(option);
@@ -199,7 +206,7 @@ export class Client extends DefaultRestAdapter {
         data: ApplicationCommandBase,
         callback: InteractionCallback,
         guild?: string | undefined,
-    ): CommandController {
+    ): SlashCommandBuilder {
         let result = this.commandRegistry.get(guild);
         if (!result) {
             result = [];
@@ -207,7 +214,7 @@ export class Client extends DefaultRestAdapter {
         }
         result.push([data, callback]);
 
-        return new CommandController(data);
+        return new SlashCommandBuilder(data);
     }
 
     /**
@@ -234,7 +241,7 @@ export class Client extends DefaultRestAdapter {
     addGlobalCommand(
         data: ApplicationCommandBase,
         callback: InteractionCallback,
-    ): CommandController {
+    ): SlashCommandBuilder {
         return this._addCommand(data, callback);
     }
 
@@ -263,7 +270,7 @@ export class Client extends DefaultRestAdapter {
     addGuildCommand(
         data: ApplicationCommandBase & { guild_id: string },
         callback: InteractionCallback,
-    ): CommandController {
+    ): SlashCommandBuilder {
         return this._addCommand(data, callback, data.guild_id);
     }
 
