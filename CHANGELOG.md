@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/teaishealthy/comity/compare/v0.2.0...v0.2.1) (2023-02-10)
+
+
+### Bug Fixes
+
+* **package.json:** typo and docs url ([e75ce10](https://github.com/teaishealthy/comity/commit/e75ce1043fe92e9d1e9ecd804643e2c3d2e8b23b))
+
 ## [0.2.0](https://github.com/teaishealthy/comity/compare/v0.1.3...v0.2.0) (2023-02-10)
 
 
