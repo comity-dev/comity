@@ -1,11 +1,12 @@
 // Only used for routes
+import { SlashCommandBuilder } from './builders.js';
 import {
     ObjectOption,
     OptionTypes,
     OptionWithValue,
     commandOptionHasValue,
     commandOptionIsObject,
-} from './options';
+} from './options.js';
 import {
     APPLICATION_COMMANDS,
     GUILD_APPLICATION_COMMANDS,
@@ -15,7 +16,6 @@ import { DefaultRestAdapter } from '@biscuitland/rest';
 // Provides more complete types than @biscuitland/api-types
 import {
     ApplicationCommandBase,
-    ApplicationCommandOption,
     FetchedApplicationCommand,
     Guild,
     Interaction,
@@ -33,23 +33,6 @@ export type InteractionCallback = (
 /**
  * A builder for slash commands
  */
-export class SlashCommandBuilder {
-    private command: ApplicationCommandBase;
-
-    constructor(command: ApplicationCommandBase) {
-        this.command = command;
-    }
-
-    /**
-     * Adds an option to the command
-     * @param option The option to add
-     */
-    option(option: ApplicationCommandOption) {
-        if (!this.command.options) this.command.options = [];
-        this.command.options.push(option);
-        return this;
-    }
-}
 
 function getMemberOrUserFromInteraction(
     data: InteractionData,
@@ -127,11 +110,15 @@ export class Client extends DefaultRestAdapter {
                                 getMemberOrUserFromInteraction(data, option) ||
                                 data.resolved?.roles?.[option.value]
                             );
-                        } else if (commandOptionIsObject(OptionTypes.ATTACHMENT, option)) {
+                        } else if (
+                            commandOptionIsObject(
+                                OptionTypes.ATTACHMENT,
+                                option,
+                            )
+                        ) {
                             return data.resolved?.attachments?.[option.value]!;
                         }
                     }) || [];
-                console.log(options);
                 response = await callback(
                     interaction as Interaction,
                     ...options,
@@ -202,76 +189,33 @@ export class Client extends DefaultRestAdapter {
         console.log('All commands created!');
     }
 
-    private _addCommand(
-        data: ApplicationCommandBase,
-        callback: InteractionCallback,
-        guild?: string | undefined,
-    ): SlashCommandBuilder {
-        let result = this.commandRegistry.get(guild);
-        if (!result) {
-            result = [];
-            this.commandRegistry.set(guild, result);
-        }
-        result.push([data, callback]);
-
-        return new SlashCommandBuilder(data);
-    }
-
     /**
-     * Adds a global command
-     * @param data The data for the command
-     * @param callback The callback to run when the command is invoked
+     * Registers a slash command
+     * @param builder The builder for the slash command
      * @example
-     * client.addGlobalCommand(
-     *     {
-     *         name: 'ping',
-     *         description: 'Pong!',
-     *         default_member_permissions: '0',
-     *     },
-     *     (interaction) => {
+     * client.addCommand(new SlashCommandBuilder()
+     *     .name('ping')
+     *     .description('Pong!')
+     *     .handler((inter) => {
      *         return {
      *             type: 4,
      *             data: {
      *                 content: 'Pong!',
      *             },
      *         };
-     *     },
+     *    }),
      * );
      */
-    addGlobalCommand(
-        data: ApplicationCommandBase,
-        callback: InteractionCallback,
-    ): SlashCommandBuilder {
-        return this._addCommand(data, callback);
-    }
-
-    /**
-     * Adds a guild command
-     * @param data The data for the command
-     * @param callback The callback to run when the command is invoked
-     * @example
-     * client.addGuildCommand(
-     *    {
-     *       name: 'ping',
-     *       description: 'Pong!',
-     *       default_member_permissions: '0',
-     *       guild_id: '1234567890',
-     *   },
-     *   (interaction) => {
-     *      return {
-     *             type: 4,
-     *             data: {
-     *                 content: 'Pong!',
-     *             },
-     *         };
-     *     },
-     * });
-     */
-    addGuildCommand(
-        data: ApplicationCommandBase & { guild_id: string },
-        callback: InteractionCallback,
-    ): SlashCommandBuilder {
-        return this._addCommand(data, callback, data.guild_id);
+    addCommand(builder: SlashCommandBuilder): void {
+        let result = this.commandRegistry.get(builder.guildId);
+        if (!result) {
+            result = [];
+            this.commandRegistry.set(builder.guildId, result);
+        }
+        result.push([
+            builder.command as ApplicationCommandBase,
+            builder.callback!,
+        ]);
     }
 
     private async deleteGuildCommands(guild: Guild, me: User): Promise<void> {

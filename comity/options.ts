@@ -29,7 +29,7 @@ export type ObjectOption<T extends 6 | 7 | 8 | 9 | 11> = {
     name: string;
     focused?: boolean;
     value: string;
-}
+};
 
 export function commandOptionHasValue(
     option: ApplicationCommandInteractionDataOption,
