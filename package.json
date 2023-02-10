@@ -2,7 +2,7 @@
     "name": "comity",
     "description": "A powerful framework for building bots on Discord's Interactions API",
     "version": "0.2.0",
-    "author": "teaishaelthy",
+    "author": "teaishealthy",
     "license": "ISC",
     "keywords": [
         "discord",
@@ -10,6 +10,7 @@
         "http",
         "rest"
     ],
+    "homepage": "https://comity.teaishealthy.dev",
     "repository": {
         "type": "git",
         "url": "https://github.com/teaishealthy/comity.git"
