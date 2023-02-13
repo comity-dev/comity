@@ -360,10 +360,10 @@ debug@^4.1.0:
   dependencies:
     ms "2.1.2"
 
-discord-typings@^10.4.1:
-  version "10.4.1"
-  resolved "https://registry.yarnpkg.com/discord-typings/-/discord-typings-10.4.1.tgz#32fef96ce9d14fce7e41110f78e34b52b3b30489"
-  integrity sha512-xuAJ7asnNsAaydeeLyiv3j/1Uie6gDOh5M2u8ZPHD1b8IoX5sQmnvype1ONKEpIhmv7o447oEMlpBHFAMBri1g==
+discord-api-types@^0.37.33:
+  version "0.37.33"
+  resolved "https://registry.yarnpkg.com/discord-api-types/-/discord-api-types-0.37.33.tgz#35985992a45dc983f59927cf2ec55b9fc36213bf"
+  integrity sha512-ZMH5RU3q1pvYS+2wGUJ5Zvy8jMGTQ4wCpbDlIQDkbIL/k6kJwBPsXnCg81g2GywlOuf0f8ezakxVSe+sZuY6ig==
 
 electron-to-chromium@^1.4.251:
   version "1.4.284"

@@ -1,10 +1,11 @@
 import { InteractionCallback } from './client.js';
-import { ObjectOption, OptionTypes, OptionWithValue } from './options.js';
+
 import {
-    ApplicationCommandBase,
-    ApplicationCommandOption,
-    Interaction,
-} from 'discord-typings';
+    APIApplicationCommand,
+    APIInteraction,
+    APIApplicationCommandOption,
+    ApplicationCommandOptionType,
+} from 'discord-api-types/v10';
 
 export type ValueOf<T> = T[keyof T];
 
@@ -15,8 +16,8 @@ export type ValueOf<T> = T[keyof T];
  * @internal
  */
 export class OptionBuilder {
-    _autocompleteHandler?: (inter: Interaction) => Promise<string[]>;
-    _option: Partial<ApplicationCommandOption> = {};
+    _autocompleteHandler?: (inter: APIInteraction) => Promise<string[]>;
+    _option: Partial<APIApplicationCommandOption> = {};
 
     /**
      * Set the name of the option
@@ -58,7 +59,7 @@ export class OptionBuilder {
      * @see {@link OptionTypes}
      * @see {@link https://discord.dev/interactions/application-commands#application-command-object-application-command-option-type}
      */
-    type(type: ValueOf<typeof OptionTypes>) {
+    type(type: ValueOf<typeof ApplicationCommandOptionType>) {
         this._option.type = type;
         return this;
     }
@@ -71,7 +72,7 @@ export class OptionBuilder {
      * @see {@link OptionTypes}
      * @see {@link https://discord.dev/interactions/application-commands#autocomplete}
      */
-    autocomplete(handler: (inter: Interaction) => Promise<string[]>) {
+    autocomplete(handler: (inter: APIInteraction) => Promise<string[]>) {
         this._autocompleteHandler = handler;
         (this._option as any).autocomplete = true; // FIXME
         return this;
@@ -82,14 +83,14 @@ export class OptionBuilder {
  * A builder for slash commands
  */
 export class SlashCommandBuilder {
-    _command: Partial<ApplicationCommandBase> = {
+    _command: Partial<APIApplicationCommand> = {
         type: 1,
     };
     _guildId?: string;
     _callback?: InteractionCallback;
     _autocompletes = new Map<
         string,
-        (inter: Interaction, value: any) => Promise<any[]> | any[]
+        (inter: APIInteraction, value: any) => Promise<any[]> | any[]
     >();
 
     /**
@@ -142,7 +143,7 @@ export class SlashCommandBuilder {
         const builder = new OptionBuilder();
         const option = callback(builder)._option;
         if (!this._command.options) this._command.options = [];
-        this._command.options.push(option as ApplicationCommandOption);
+        this._command.options.push(option as APIApplicationCommandOption);
         if (builder._autocompleteHandler) {
             this._autocompletes.set(option.name!, builder._autocompleteHandler);
         }

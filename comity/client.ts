@@ -1,39 +1,30 @@
 // Only used for routes
 import { SlashCommandBuilder } from './builders.js';
-import {
-    ObjectOption,
-    OptionTypes,
-    OptionWithValue,
-    commandOptionHasValue,
-    commandOptionIsObject,
-} from './options.js';
-import {
-    APPLICATION_COMMANDS,
-    GUILD_APPLICATION_COMMANDS,
-    USER,
-} from '@biscuitland/api-types';
 import { DefaultRestAdapter } from '@biscuitland/rest';
-// Provides more complete types than @biscuitland/api-types
 import {
-    ApplicationCommandBase,
-    FetchedApplicationCommand,
-    Guild,
-    Interaction,
-    InteractionData,
-    InteractionResponse,
-    Member,
-    User,
-} from 'discord-typings';
+    APIChatInputApplicationCommandInteraction,
+    APIApplicationCommandAutocompleteInteraction,
+    APIChatInputApplicationCommandInteractionData as APIInteractionData,
+    APIUser,
+    APIApplicationCommand,
+    APIGuild,
+    APIInteractionResponse,
+    ApplicationCommandOptionType,
+    InteractionType,
+    Routes,
+} from 'discord-api-types/v10';
+
+type APIInteraction = APIChatInputApplicationCommandInteraction | APIApplicationCommandAutocompleteInteraction;
 
 export type InteractionCallback = (
-    inter: Interaction,
+    inter: APIInteraction,
     ...options: any[]
-) => Promise<InteractionResponse> | InteractionResponse;
+) => Promise<APIInteractionResponse> | APIInteractionResponse;
 
 function getMemberOrUserFromInteraction(
-    data: InteractionData,
-    option: ObjectOption<6 | 7 | 8 | 9>,
-): User | Member {
+    data: APIInteractionData,
+    option: { value: string },
+): APIUser {
     const user = data.resolved?.users?.[option.value]!;
     const maybeMember = data.resolved?.members?.[option.value];
 
@@ -66,13 +57,13 @@ export class Client extends DefaultRestAdapter {
      * client.processInteraction(interaction);
      */
     async processInteraction(
-        interaction: Interaction,
-    ): Promise<InteractionResponse> {
+        interaction: APIInteraction,
+    ): Promise<APIInteractionResponse> {
         console.log(
             `Received interaction ${interaction.id} of type ${interaction.type}`,
         );
 
-        let response: InteractionResponse | undefined;
+        let response: APIInteractionResponse | undefined;
         if (interaction.type === 2) {
             const data = interaction.data!;
             const { name, guild_id } = data;
@@ -84,47 +75,48 @@ export class Client extends DefaultRestAdapter {
             if (callback) {
                 const options =
                     data.options?.map((option) => {
-                        if (commandOptionHasValue(option)) {
-                            return (option as OptionWithValue).value;
-                        } else if (
-                            commandOptionIsObject(OptionTypes.USER, option)
-                        ) {
-                            getMemberOrUserFromInteraction(data, option);
-                        } else if (
-                            commandOptionIsObject(OptionTypes.CHANNEL, option)
-                        ) {
-                            return data.resolved?.channels?.[option.value]!;
-                        } else if (
-                            commandOptionIsObject(OptionTypes.ROLE, option)
-                        ) {
-                            return data.resolved?.roles?.[option.value]!;
-                        } else if (
-                            commandOptionIsObject(
-                                OptionTypes.MENTIONABLE,
-                                option,
-                            )
-                        ) {
-                            return (
-                                getMemberOrUserFromInteraction(data, option) ||
-                                data.resolved?.roles?.[option.value]
-                            );
-                        } else if (
-                            commandOptionIsObject(
-                                OptionTypes.ATTACHMENT,
-                                option,
-                            )
-                        ) {
-                            return data.resolved?.attachments?.[option.value]!;
+                        switch (option.type) {
+                            case ApplicationCommandOptionType.Integer:
+                            case ApplicationCommandOptionType.Number:
+                            case ApplicationCommandOptionType.String:
+                            case ApplicationCommandOptionType.Boolean:
+                                return option.value;
+                            case ApplicationCommandOptionType.User:
+                                return getMemberOrUserFromInteraction(
+                                    data,
+                                    option,
+                                );
+                            case ApplicationCommandOptionType.Channel:
+                                return data.resolved?.channels?.[option.value]!;
+                            case ApplicationCommandOptionType.Role:
+                                return data.resolved?.roles?.[option.value]!;
+                            case ApplicationCommandOptionType.Mentionable:
+                                return (
+                                    getMemberOrUserFromInteraction(
+                                        data,
+                                        option,
+                                    ) || data.resolved?.roles?.[option.value]
+                                );
+                            case ApplicationCommandOptionType.Attachment:
+                                return data.resolved?.attachments?.[
+                                    option.value
+                                ]!;
+                            // default:
+                            default:
+                                throw new Error("Unhandled option type");
+
+
                         }
                     }) || [];
                 response = await callback(
-                    interaction as Interaction,
+                    interaction as APIInteraction,
                     ...options,
                 );
             }
-        } else if (interaction.type === 4) {
+        } else if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {
             const focusedOption = interaction.data?.options?.find(
-                (option) => option.focused,
+                // ts thinks we can get a sub command here, but we can't, so we safely cast
+                (option) => (option as any).focused,
             );
 
             if (!focusedOption) {
@@ -140,7 +132,7 @@ export class Client extends DefaultRestAdapter {
 
             const choices = await builder?._autocompletes.get(
                 focusedOption.name,
-            )?.(interaction, (focusedOption as OptionWithValue).value);
+            )?.(interaction, (focusedOption as any).value);
 
             if (!choices) {
                 throw new Error('No choices found');
@@ -168,12 +160,12 @@ export class Client extends DefaultRestAdapter {
      * await client.deployCommands();
      */
     async deployCommands(): Promise<void> {
-        const me = await this.get<User>(USER('@me'));
+        const me = await this.get<APIUser>(Routes.user('@me'));
         const globalCommands = this.commandRegistry.get(undefined);
 
         if (globalCommands) {
-            const commands = await this.get<FetchedApplicationCommand[]>(
-                APPLICATION_COMMANDS(me.id),
+            const commands = await this.get<APIApplicationCommand[]>(
+                Routes.applicationCommands(me.id),
             );
             const toDelete = commands.filter(
                 (command) =>
@@ -185,19 +177,19 @@ export class Client extends DefaultRestAdapter {
 
             await Promise.all(
                 toDelete.map(async (command) => {
-                    await this.delete(APPLICATION_COMMANDS(me.id, command.id));
+                    await this.delete(Routes.applicationCommand(me.id, command.id));
                     console.log(`Deleted global command ${command.name}`);
                 }),
             );
 
             await this.put(
-                APPLICATION_COMMANDS(me.id),
+                Routes.applicationCommands(me.id),
                 globalCommands.map((c) => c[0]._command),
             );
             console.log('All global commands created!');
         }
 
-        const guilds = await this.get<Guild[]>('/users/@me/guilds');
+        const guilds = await this.get<APIGuild[]>('/users/@me/guilds');
 
         for (const guild of guilds) {
             await this.deleteGuildCommands(guild, me);
@@ -210,7 +202,7 @@ export class Client extends DefaultRestAdapter {
                     ]) => {
                         if (guildId) {
                             await this.put(
-                                APPLICATION_COMMANDS(me.id, guildId),
+                                Routes.applicationCommand(me.id, guildId),
                                 commands.map((c) => c._command),
                             );
                         }
@@ -247,12 +239,12 @@ export class Client extends DefaultRestAdapter {
         result.push([builder, builder._callback!]);
     }
 
-    private async deleteGuildCommands(guild: Guild, me: User): Promise<void> {
+    private async deleteGuildCommands(guild: APIGuild, me: APIUser): Promise<void> {
         const guildCommands = this.commandRegistry.get(guild.id);
         const discordGuildCommands = await this.get<
-            FetchedApplicationCommand[]
-        >(GUILD_APPLICATION_COMMANDS(me.id, guild.id));
-        let toDelete: FetchedApplicationCommand[] = discordGuildCommands;
+            APIApplicationCommand[]
+        >(Routes.applicationGuildCommands(me.id, guild.id));
+        let toDelete: APIApplicationCommand[] = discordGuildCommands;
 
         if (guildCommands) {
             const toDelete = discordGuildCommands.filter(
@@ -266,7 +258,7 @@ export class Client extends DefaultRestAdapter {
             );
             for (const command of toDelete) {
                 await this.delete(
-                    GUILD_APPLICATION_COMMANDS(me.id, guild.id, command.id),
+                    Routes.applicationGuildCommand(me.id, guild.id, command.id),
                 );
                 console.log(`Deleted command ${command.name} from ${guild.id}`);
             }
@@ -274,7 +266,7 @@ export class Client extends DefaultRestAdapter {
 
         for (const deleteCommand of toDelete) {
             await this.delete(
-                GUILD_APPLICATION_COMMANDS(me.id, guild.id, deleteCommand.id),
+                Routes.applicationGuildCommand(me.id, guild.id, deleteCommand.id),
             );
             console.log(
                 `Deleted command ${deleteCommand.name} from ${guild.id}`,
