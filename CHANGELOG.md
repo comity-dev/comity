@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/teaishealthy/comity/compare/v0.2.1...v0.2.2) (2023-02-13)
+
+
+### Bug Fixes
+
+* **package.json:** update homepage ([0278850](https://github.com/teaishealthy/comity/commit/0278850578893d92447f8fb668249dcdf946be61))
+
 ## [0.2.1](https://github.com/teaishealthy/comity/compare/v0.2.0...v0.2.1) (2023-02-10)
 
 
