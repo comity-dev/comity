@@ -1,7 +1,7 @@
 {
     "name": "comity",
     "description": "A powerful framework for building bots on Discord's Interactions API",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "author": "teaishealthy",
     "license": "ISC",
     "keywords": [
