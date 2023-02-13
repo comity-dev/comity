@@ -1,5 +1,5 @@
 import { Client, SlashCommandBuilder } from 'comity';
-import { InteractionResponse } from 'discord-typings';
+import { APIInteractionResponse } from 'discord-api-types/v10';
 
 export const client = new Client('token');
 
@@ -13,6 +13,6 @@ client.addCommand(
                 data: {
                     content: 'Pong!',
                 },
-            } as InteractionResponse;
+            } as APIInteractionResponse;
         }),
 );
