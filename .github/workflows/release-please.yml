@@ -13,3 +13,12 @@ jobs:
           release-type: node
           token: ${{ secrets.GITHUB_TOKEN }}
           package-name: release-please-action
+      - uses: actions/setup-node@v3
+        if: ${{ steps.release-please.outputs.release_created }}
+        with:
+          node-version: '18.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: yarn publish
+        if: ${{ steps.release-please.outputs.release_created }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
