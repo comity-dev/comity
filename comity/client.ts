@@ -70,7 +70,7 @@ export class Client extends DefaultRestAdapter {
 
             const callback = this.commandRegistry
                 .get(guild_id)
-                ?.find(([command]) => command._command.name === name)?.[1];
+                ?.find(([command]) => command["command"].name === name)?.[1];
 
             if (callback) {
                 const options =
@@ -127,10 +127,10 @@ export class Client extends DefaultRestAdapter {
                 .get(interaction.data?.guild_id)
                 ?.find(
                     ([command]) =>
-                        command._command.name === interaction.data?.name,
+                        command["command"].name === interaction.data?.name,
                 )?.[0];
 
-            const choices = await builder?._autocompletes.get(
+            const choices = await builder?.["autocompletes"].get(
                 focusedOption.name,
             )?.(interaction, (focusedOption as any).value);
 
@@ -170,7 +170,7 @@ export class Client extends DefaultRestAdapter {
             const toDelete = commands.filter(
                 (command) =>
                     !globalCommands.find(
-                        (c) => c[0]._command.name === command.name,
+                        (c) => c[0]["command"].name === command.name,
                     ),
             );
             console.log(`Deleting ${toDelete.length} global commands`);
@@ -184,7 +184,7 @@ export class Client extends DefaultRestAdapter {
 
             await this.put(
                 Routes.applicationCommands(me.id),
-                globalCommands.map((c) => c[0]._command),
+                globalCommands.map((c) => c[0]["command"]),
             );
             console.log('All global commands created!');
         }
@@ -203,7 +203,7 @@ export class Client extends DefaultRestAdapter {
                         if (guildId) {
                             await this.put(
                                 Routes.applicationCommand(me.id, guildId),
-                                commands.map((c) => c._command),
+                                commands.map((c) => c["command"]),
                             );
                         }
                     },
@@ -231,12 +231,12 @@ export class Client extends DefaultRestAdapter {
      * );
      */
     addCommand(builder: SlashCommandBuilder): void {
-        let result = this.commandRegistry.get(builder._guildId);
+        let result = this.commandRegistry.get(builder["guildId"]);
         if (!result) {
             result = [];
-            this.commandRegistry.set(builder._guildId, result);
+            this.commandRegistry.set(builder["guildId"], result);
         }
-        result.push([builder, builder._callback!]);
+        result.push([builder, builder["callback"]!]);
     }
 
     private async deleteGuildCommands(guild: APIGuild, me: APIUser): Promise<void> {
@@ -250,7 +250,7 @@ export class Client extends DefaultRestAdapter {
             const toDelete = discordGuildCommands.filter(
                 (command) =>
                     !guildCommands.find(
-                        (c) => c[0]._command.name === command.name,
+                        (c) => c[0]["command"].name === command.name,
                     ),
             );
             console.log(

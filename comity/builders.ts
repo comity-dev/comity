@@ -16,8 +16,8 @@ export type ValueOf<T> = T[keyof T];
  * @internal
  */
 export class OptionBuilder {
-    _autocompleteHandler?: (inter: APIInteraction) => Promise<string[]>;
-    _option: Partial<APIApplicationCommandOption> = {};
+    private autocompleteHandler?: (inter: APIInteraction) => Promise<string[]>;
+    private option: Partial<APIApplicationCommandOption> = {};
 
     /**
      * Set the name of the option
@@ -27,7 +27,7 @@ export class OptionBuilder {
      * Must be unique within the command
      */
     name(name: string) {
-        this._option.name = name;
+        this.option.name = name;
         return this;
     }
 
@@ -38,7 +38,7 @@ export class OptionBuilder {
      * Must be between 1 and 100 characters long
      */
     description(description: string) {
-        this._option.description = description;
+        this.option.description = description;
         return this;
     }
 
@@ -47,7 +47,7 @@ export class OptionBuilder {
      * @param required Whether the option is required
      */
     required(required: boolean) {
-        this._option.required = required;
+        this.option.required = required;
         return this;
     }
 
@@ -58,7 +58,7 @@ export class OptionBuilder {
      * @see {@link https://discord.dev/interactions/application-commands#application-command-object-application-command-option-type}
      */
     type(type: ValueOf<typeof ApplicationCommandOptionType>) {
-        this._option.type = type;
+        this.option.type = type;
         return this;
     }
 
@@ -69,8 +69,8 @@ export class OptionBuilder {
      * @see {@link https://discord.dev/interactions/application-commands#autocomplete}
      */
     autocomplete(handler: (inter: APIInteraction) => Promise<string[]>) {
-        this._autocompleteHandler = handler;
-        (this._option as any).autocomplete = true; // FIXME
+        this.autocompleteHandler = handler;
+        (this.option as any).autocomplete = true; // FIXME
         return this;
     }
 }
@@ -79,12 +79,12 @@ export class OptionBuilder {
  * A builder for slash commands
  */
 export class SlashCommandBuilder {
-    _command: Partial<APIApplicationCommand> = {
+    private command: Partial<APIApplicationCommand> = {
         type: 1,
     };
-    _guildId?: string;
-    _callback?: InteractionCallback;
-    _autocompletes = new Map<
+    private guildId?: string;
+    private callback?: InteractionCallback;
+    private autocompletes = new Map<
         string,
         (inter: APIInteraction, value: any) => Promise<any[]> | any[]
     >();
@@ -96,7 +96,7 @@ export class SlashCommandBuilder {
      * Must be between 1 and 32 characters long
      */
     name(name: string) {
-        this._command.name = name;
+        this.command.name = name;
         return this;
     }
 
@@ -107,7 +107,7 @@ export class SlashCommandBuilder {
      * Must be between 1 and 100 characters long
      */
     description(description: string) {
-        this._command.description = description;
+        this.command.description = description;
         return this;
     }
 
@@ -116,7 +116,7 @@ export class SlashCommandBuilder {
      * @param permissions The permissions to set
      */
     defaultMemberPermissions(permissions: string) {
-        this._command.default_member_permissions = permissions;
+        this.command.default_member_permissions = permissions;
         return this;
     }
 
@@ -127,7 +127,7 @@ export class SlashCommandBuilder {
      * This is only for globally-scoped commands
      */
     dmPermission(allowed: boolean) {
-        this._command.dm_permission = allowed;
+        this.command.dm_permission = allowed;
         return this;
     }
 
@@ -137,11 +137,11 @@ export class SlashCommandBuilder {
      */
     option(callback: (builder: OptionBuilder) => OptionBuilder) {
         const builder = new OptionBuilder();
-        const option = callback(builder)._option;
-        if (!this._command.options) this._command.options = [];
-        this._command.options.push(option as APIApplicationCommandOption);
-        if (builder._autocompleteHandler) {
-            this._autocompletes.set(option.name!, builder._autocompleteHandler);
+        const option = callback(builder)["option"];
+        if (!this.command.options) this.command.options = [];
+        this.command.options.push(option as APIApplicationCommandOption);
+        if (builder["autocompleteHandler"]) {
+            this.autocompletes.set(option.name!, builder["autocompleteHandler"]);
         }
         return this;
     }
@@ -151,7 +151,7 @@ export class SlashCommandBuilder {
      * @param guildId The ID of the guild
      */
     guild(guildId: string) {
-        this._guildId = guildId;
+        this.guildId = guildId;
         return this;
     }
 
@@ -161,7 +161,7 @@ export class SlashCommandBuilder {
      * This is the default (overrides {@link SlashCommandBuilder#guild})
      */
     global() {
-        this._guildId = undefined;
+        this.guildId = undefined;
         return this;
     }
 
@@ -170,7 +170,7 @@ export class SlashCommandBuilder {
      * @param callback The callback to run when the command is invoked
      */
     handler(callback: InteractionCallback) {
-        this._callback = callback;
+        this.callback = callback;
         return this;
     }
 }
