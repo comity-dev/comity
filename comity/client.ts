@@ -14,7 +14,7 @@ import {
     Routes,
 } from 'discord-api-types/v10';
 
-type APIInteraction = APIChatInputApplicationCommandInteraction | APIApplicationCommandAutocompleteInteraction;
+export type APIInteraction = APIChatInputApplicationCommandInteraction | APIApplicationCommandAutocompleteInteraction;
 
 export type InteractionCallback = (
     inter: APIInteraction,

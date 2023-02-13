@@ -55,8 +55,6 @@ export class OptionBuilder {
      * Set the type of the option
      * @param type The type of the option
      * @remarks
-     * Must be one of the values in {@link OptionTypes}
-     * @see {@link OptionTypes}
      * @see {@link https://discord.dev/interactions/application-commands#application-command-object-application-command-option-type}
      */
     type(type: ValueOf<typeof ApplicationCommandOptionType>) {
@@ -68,8 +66,6 @@ export class OptionBuilder {
      * Set the autocomplete handler for the option
      * @param handler The autocomplete handler
      * @remarks
-     * This is only for options of type {@link OptionTypes.STRING}, {@link OptionTypes.INTEGER}, or {@link OptionTypes.NUMBER}
-     * @see {@link OptionTypes}
      * @see {@link https://discord.dev/interactions/application-commands#autocomplete}
      */
     autocomplete(handler: (inter: APIInteraction) => Promise<string[]>) {
