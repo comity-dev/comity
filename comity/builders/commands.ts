@@ -1,9 +1,8 @@
-import { InteractionCallback } from './client.js';
-
+import { InteractionCallback } from '../client.js';
 import {
     APIApplicationCommand,
-    APIInteraction,
     APIApplicationCommandOption,
+    APIInteraction,
     ApplicationCommandOptionType,
 } from 'discord-api-types/v10';
 
@@ -137,11 +136,14 @@ export class SlashCommandBuilder {
      */
     option(callback: (builder: OptionBuilder) => OptionBuilder) {
         const builder = new OptionBuilder();
-        const option = callback(builder)["option"];
+        const option = callback(builder)['option'];
         if (!this.command.options) this.command.options = [];
         this.command.options.push(option as APIApplicationCommandOption);
-        if (builder["autocompleteHandler"]) {
-            this.autocompletes.set(option.name!, builder["autocompleteHandler"]);
+        if (builder['autocompleteHandler']) {
+            this.autocompletes.set(
+                option.name!,
+                builder['autocompleteHandler'],
+            );
         }
         return this;
     }
