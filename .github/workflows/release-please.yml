@@ -18,10 +18,13 @@ jobs:
         with:
           node-version: '18.x'
           registry-url: 'https://registry.npmjs.org'
+<<<<<<< Updated upstream
       - run: pnpm install
         if: ${{ steps.release-please.outputs.release_created }}
       - run: pnpm build
         if: ${{ steps.release-please.outputs.release_created }}
+=======
+>>>>>>> Stashed changes
       - run: pnpm publish
         if: ${{ steps.release-please.outputs.release_created }}
         env:

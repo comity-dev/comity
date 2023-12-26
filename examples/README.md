@@ -2,11 +2,11 @@
 
 This directory contains examples of how to use Comity with different frameworks / platforms.
 
-All examples are written in TypeScript, implement interaction verification, and use the client/commands in [base.ts](./base.ts);
+All examples are written in TypeScript and implement interaction verification.
 
-You first need to **deploy the application commands**: You can use the provided [deploy.ts](./deploy.ts) script with `ts-node-esm deploy.ts`.
+You first need to **deploy the application commands**: You can use the provided [deploy.ts](./deploy.ts) script with `tsx deploy.ts`.
 
-Make sure to replace `'token'` with your bot token in [base.ts](./base.ts) and `'publicKey'` with your application's public key in your framework's example.
+Make sure to replace `'token'` with your bot token and `'publicKey'` with your application's public key in your framework's example.
 
 
 ## Frameworks
